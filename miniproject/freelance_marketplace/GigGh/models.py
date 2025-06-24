@@ -1,16 +1,23 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator
 
 # Create your models here.
 
-class User(models.Model):
+class User(AbstractUser):
+    PAYMENT_METHODS = [
+        ('mobile_money', 'Mobile Money'),
+        ('bank', 'Bank Transfer')
+    ]
+
     id = models.AutoField(primary_key=True)
     email = models.EmailField(unique=True, max_length=254)
     password = models.CharField(max_length=128)
     name = models.CharField(max_length=100)
-    paymentmethod = models.CharField(max_length=50, blank=True, null=True)
+    paymentmethod = models.CharField(max_length=20, choices=PAYMENT_METHODS, blank=True)
     paymentmethodaccount = models.CharField(max_length=100, blank=True, null=True)
     bio = models.TextField(blank=True)
+    profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
 
     def __str__(self):
         return self.email
@@ -25,12 +32,13 @@ class Gig(models.Model):
         OPEN = 'open', 'Open'
         CLOSED = 'closed', 'Closed'
 
+    seller = models.ForeignKey(User, on_delete=models.CASCADE)
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
     ending_price = models.DecimalField(max_digits=10, decimal_places=2)
-    currency = models.CharField(max_length=10)
+    currency = models.CharField(max_length=10, default='GHS')
     timeline_type = models.CharField(
         max_length=20,
         choices=TimelineType.choices
@@ -38,12 +46,14 @@ class Gig(models.Model):
     timeline_fixed_date = models.DateField(blank=True, null=True)
     timeline_duration_start = models.DateField(blank=True, null=True)
     timeline_duration_end = models.DateField(blank=True, null=True)
-    image = models.TextField()  # base64 string
+    image = models.ImageField(upload_to='gig_images/', blank=True, null=True)
     status = models.CharField(
         max_length=10,
         choices=Status.choices,
         default=Status.OPEN
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
@@ -52,8 +62,9 @@ class Gig(models.Model):
 class Bid(models.Model):
     id = models.AutoField(primary_key=True)
     gigId = models.ForeignKey('Gig', on_delete=models.CASCADE, related_name='bids')
+    freelancer = models.ForeignKey(User, on_delete=models.CASCADE)
     biddingAmount = models.DecimalField(max_digits=10, decimal_places=2)
-    biddingCurrency = models.CharField(max_length=10)
+    biddingCurrency = models.CharField(max_length=10, default='GHS')
     
     STATUS_CHOICES = [
         ('opened', 'Opened'),
@@ -61,6 +72,7 @@ class Bid(models.Model):
         ('rejected', 'Rejected'),
     ]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='opened')
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Bid {self.id} - {self.biddingAmount} {self.biddingCurrency} ({self.status})"
@@ -72,8 +84,9 @@ class Submission(models.Model):
     id = models.AutoField(primary_key=True)
     gigId = models.ForeignKey('Gig', on_delete=models.CASCADE, related_name='submissions')
     bidId = models.ForeignKey('Bid', on_delete=models.CASCADE, related_name='submissions')
-    submissionFile = models.TextField()  # base64-encoded file content
+    submissionFile = models.FileField(upload_to='submissions/')
     submissionNotes = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Submission {self.id} for Gig {self.gigId_id} via Bid {self.bidId_id}"
@@ -102,11 +115,13 @@ class Payment(models.Model):
 
 
 class Chat(models.Model):
+    gig = models.ForeignKey(Gig, on_delete=models.CASCADE)
     id = models.AutoField(primary_key=True)
     sender = models.ForeignKey('User', on_delete=models.CASCADE, related_name='chats_sent')
     recipient = models.ForeignKey('User', on_delete=models.CASCADE, related_name='chats_received')
     message = models.TextField()
     room = models.CharField(max_length=100)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Chat from {self.sender_id} to {self.recipient_id} in {self.room}"
