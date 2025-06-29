@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MinValueValidator
+from django.core.validators import FileExtensionValidator
 
 # Create your models here.
 
@@ -17,7 +17,23 @@ class User(AbstractUser):
     paymentmethod = models.CharField(max_length=20, choices=PAYMENT_METHODS, blank=True)
     paymentmethodaccount = models.CharField(max_length=100, blank=True, null=True)
     bio = models.TextField(blank=True)
-    profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
+    profile_picture = models.ImageField(
+        upload_to='profile_pics/',
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(['jpg', 'jpeg', 'png'])]
+    )
+    phone_number = models.CharField(max_length=20, blank=True)
+    
+    def save(self, *args, **kwargs):
+        # Delete old profile picture when updating
+        try:
+            old = User.objects.get(id=self.id)
+            if old.profile_picture != self.profile_picture:
+                old.profile_picture.delete(save=False)
+        except:
+            pass
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email
@@ -32,10 +48,21 @@ class Gig(models.Model):
         OPEN = 'open', 'Open'
         CLOSED = 'closed', 'Closed'
 
+    class Category(models.TextChoices):
+        DESIGN = 'design', 'Design'
+        DEVELOPMENT = 'development', 'Development'
+        WRITING = 'writing', 'Writing'
+        ADMINISTRATIVE = 'administrative', 'Administrative'
+
     seller = models.ForeignKey(User, on_delete=models.CASCADE)
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
+    category = models.CharField(
+        max_length=15,
+        choices=Category.choices,
+        default=Category.DEVELOPMENT
+    )
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
     ending_price = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=10, default='GHS')
@@ -54,6 +81,11 @@ class Gig(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.id:  
+            self.seller = kwargs.pop('seller', None)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title

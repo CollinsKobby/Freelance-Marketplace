@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GigGh{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+    <link rel="stylesheet" href="{% static 'css/marketplace.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <a href="{% url 'home' %}" class="branding-link">
+                <div class="branding">
+                    <img src="{% static 'images/GigGh.png' %}" alt="GigGh Logo" class="logo-img">
+                    <!-- <span class="logo-text">GigGh</span> -->
+                </div>
+            </a>
+            <nav class="main-nav">
+            {% if user.is_authenticated %}
+                <a href="{% url 'create_gig' %}">Post a Gig</a>
+                <a href="{% url 'profile' %}">My Profile</a>
+                <a href="{% url 'logout' %}">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'signup' %}" class="btn-signup">Sign Up</a>
+            {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="content-wrapper">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; {% now "Y" %} GigGh. All rights reserved.</p>
+    </footer>
+
+    <script src="{% static 'js/base.js' %}"></script>
+    <script src="{% static 'js/marketplace.js' %}"></script>
+    <script src="{% static 'js/auth.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

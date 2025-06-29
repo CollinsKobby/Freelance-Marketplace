@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="profile-avatar">
+            {% if user.profile_picture %}
+                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}'s profile picture">
+            {% else %}
+                <div class="avatar-placeholder">{{ user.username|first|upper }}</div>
+            {% endif %}
+        </div>
+        <div class="profile-info">
+            <h1>{{ user.username }}</h1>
+            <p class="profile-email">{{ user.email }}</p>
+            <p class="profile-bio">{{ user.bio }}</p>
+            <div class="profile-stats">
+                <div class="stat">
+                    <span class="stat-number">{{ posted_gigs.count }}</span>
+                    <span class="stat-label">Gigs Posted</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">{{ bids.count }}</span>
+                    <span class="stat-label">Bids Made</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">{{ user.date_joined|date:"M Y" }}</span>
+                    <span class="stat-label">Member Since</span>
+                </div>
+            </div>
+        </div>
+        <a href="{% url 'edit_profile' %}" class="btn-edit-profile">Edit Profile</a>
+    </div>
+
+    <!-- Profile Navigation -->
+    <nav class="profile-tabs">
+        <a href="?tab=overview" class="{% if active_tab == 'overview' %}active{% endif %}">Overview</a>
+        <a href="?tab=gigs" class="{% if active_tab == 'gigs' %}active{% endif %}">My Gigs</a>
+        <a href="?tab=bids" class="{% if active_tab == 'bids' %}active{% endif %}">My Bids</a>
+        <a href="?tab=settings" class="{% if active_tab == 'settings' %}active{% endif %}">Settings</a>
+    </nav>
+
+    <!-- Tab Content -->
+    <div class="profile-content">
+        {% if active_tab == 'overview' %}
+            <div class="overview-section">
+                <h2>Recent Activity</h2>
+                <!-- Activity feed would go here -->
+            </div>
+            
+        {% elif active_tab == 'gigs' %}
+            <div class="gigs-section">
+                <h2>My Posted Gigs</h2>
+                {% for gig in posted_gigs %}
+                <div class="gig-card">
+                    <h3><a href="{% url 'gig_detail' gig.id %}">{{ gig.title }}</a></h3>
+                    <p>{{ gig.description|truncatechars:150 }}</p>
+                    <div class="gig-meta">
+                        <span class="gig-status">{{ gig.get_status_display }}</span>
+                        <span class="gig-price">{{ gig.currency }} {{ gig.starting_price }} - {{ gig.ending_price }}</span>
+                        <span class="gig-date">{{ gig.created_at|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+                {% empty %}
+                <p>You haven't posted any gigs yet. <a href="{% url 'create_gig' %}">Post your first gig!</a></p>
+                {% endfor %}
+            </div>
+            
+        {% elif active_tab == 'bids' %}
+            <div class="bids-section">
+                <h2>My Bids</h2>
+                {% for bid in bids %}
+                <div class="bid-card {% if bid.status == 'accepted' %}accepted{% endif %}">
+                    <h3><a href="{% url 'gig_detail' bid.gig.id %}">{{ bid.gig.title }}</a></h3>
+                    <div class="bid-meta">
+                        <span class="bid-amount">{{ bid.currency }} {{ bid.amount }}</span>
+                        <span class="bid-status">{{ bid.get_status_display }}</span>
+                        <span class="bid-date">{{ bid.created_at|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+                {% empty %}
+                <p>You haven't placed any bids yet.</p>
+                {% endfor %}
+            </div>
+            
+        {% elif active_tab == 'settings' %}
+            <div class="settings-section">
+                <h2>Account Settings</h2>
+                <!-- Settings form would go here -->
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

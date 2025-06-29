@@ -1,0 +1,19 @@
+<div class="chat-container" id="chat-container"></div>
+    <div class="chat-header">
+        <h3>Chat with {{ recipient.username }}</h3>
+        <button class="close-chat">&times;</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+        {% for message in chat_messages %}
+            <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
+                <p>{{ message.message }}</p>
+                <span class="timestamp">{{ message.timestamp|time:"H:i" }}</span>
+            </div>
+        {% endfor %}
+    </div>
+    <form class="chat-form" id="chat-form">
+        {% csrf_token %}
+        <input type="text" name="message" placeholder="Type your message..." required>
+        <button type="submit">Send</button>
+    </form>
+</div>

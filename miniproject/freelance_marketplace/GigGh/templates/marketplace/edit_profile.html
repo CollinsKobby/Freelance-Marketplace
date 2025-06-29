@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h1>Edit Profile</h1>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="profile-form">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <h2>Profile Picture</h2>
+            <div class="avatar-upload">
+                <div class="avatar-preview">
+                    {% if form.instance.profile_picture %}
+                        <img id="imagePreview" src="{{ form.instance.profile_picture.url }}" alt="Current profile picture">
+                    {% else %}
+                        <div id="imagePreview" class="avatar-placeholder">{{ request.user.username|first|upper }}</div>
+                    {% endif %}
+                </div>
+                <div class="avatar-upload-controls">
+                    {{ form.profile_picture }}
+                    <label for="id_profile_picture" class="btn-upload">Choose Image</label>
+                    <small>JPG or PNG, max 2MB</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Basic Information</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>First Name</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="form-group">
+                    <label>Last Name</label>
+                    {{ form.last_name }}
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Bio</label>
+                {{ form.bio }}
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                {{ form.phone_number }}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Payment Information</h2>
+            <div class="form-group">
+                <label>Payment Method</label>
+                {{ form.payment_method }}
+            </div>
+            <div class="form-group">
+                <label>Payment Account</label>
+                {{ form.payment_account }}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{% url 'profile' %}?tab=settings" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('id_profile_picture').addEventListener('change', function(event) {
+    const preview = document.getElementById('imagePreview');
+    const file = event.target.files[0];
+    
+    if (file) {
+        if (preview.classList.contains('avatar-placeholder')) {
+            preview.classList.remove('avatar-placeholder');
+            preview.innerHTML = '';
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}
