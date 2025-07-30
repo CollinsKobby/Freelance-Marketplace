@@ -3,92 +3,96 @@
 
 {% block content %}
 <div class="form-container">
-    <h1>{{ title }}</h1>
-    
-    <form method="post" enctype="multipart/form-data">
+    <h2>{{ title }}</h2>
+    <form method="post" enctype="multipart/form-data" id="gigForm">
         {% csrf_token %}
         
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {% for error in form.non_field_errors %}
-                    {{ error }}
-                {% endfor %}
-            </div>
-        {% endif %}
-        
+        <!-- Basic Fields -->
         <div class="form-group">
-            <label for="{{ form.title.id_for_label }}">Title</label>
+            {{ form.title.label_tag }}
             {{ form.title }}
             {{ form.title.errors }}
         </div>
         
         <div class="form-group">
-            <label for="{{ form.description.id_for_label }}">Description</label>
+            {{ form.description.label_tag }}
             {{ form.description }}
             {{ form.description.errors }}
         </div>
         
+        <!-- Category Selection -->
+        <div class="form-group">
+            {{ form.category.label_tag }}
+            {{ form.category }}
+            {{ form.category.errors }}
+        </div>
+        
+        <!-- Timeline Type Selection -->
+        <div class="form-group">
+            <label for="id_timeline_type">Timeline Type</label>
+            <select name="timeline_type" id="id_timeline_type" class="form-control" required>
+                <option value="">Select an option</option>
+                <option value="fixed_date" {% if form.timeline_type.value == 'fixed_Date' %}selected{% endif %}>Fixed Date</option>
+                <option value="duration" {% if form.timeline_type.value == 'duration' %}selected{% endif %}>Duration</option>
+            </select>
+            {{ form.timeline_type.errors }}
+        </div>
+
+        <!-- Fixed Date Fields -->
+        <div id="fixedDateFields" class="timeline-fields" style="display: none;">
+            <div class="form-group">
+                <label for="id_timeline_fixed_date">Fixed Date</label>
+                <input type="date" name="timeline_fixed_date" id="id_timeline_fixed_date" 
+                    class="form-control" value="{{ form.timeline_fixed_date.value|default_if_none:'' }}">
+                {{ form.timeline_fixed_date.errors }}
+            </div>
+        </div>
+
+        <!-- Duration Fields -->
+        <div id="durationFields" class="timeline-fields" style="display: none;">
+            <div class="form-group">
+                <label for="id_timeline_duration_start">Start Date</label>
+                <input type="date" name="timeline_duration_start" id="id_timeline_duration_start" 
+                    class="form-control" value="{{ form.timeline_duration_start.value|default_if_none:'' }}">
+                {{ form.timeline_duration_start.errors }}
+            </div>
+            <div class="form-group">
+                <label for="id_timeline_duration_end">End Date</label>
+                <input type="date" name="timeline_duration_end" id="id_timeline_duration_end" 
+                    class="form-control" value="{{ form.timeline_duration_end.value|default_if_none:'' }}">
+                {{ form.timeline_duration_end.errors }}
+            </div>
+        </div>
+        
+        <!-- Price Fields -->
         <div class="form-row">
             <div class="form-group">
-                <label for="{{ form.starting_price.id_for_label }}">Starting Price</label>
+                {{ form.starting_price.label_tag }}
                 {{ form.starting_price }}
                 {{ form.starting_price.errors }}
             </div>
             <div class="form-group">
-                <label for="{{ form.ending_price.id_for_label }}">Ending Price (Optional)</label>
+                {{ form.ending_price.label_tag }}
                 {{ form.ending_price }}
                 {{ form.ending_price.errors }}
             </div>
-            <div class="form-group">
-                <label for="{{ form.currency.id_for_label }}">Currency</label>
-                {{ form.currency }}
-                {{ form.currency.errors }}
-            </div>
         </div>
         
+        <!-- Image Upload -->
         <div class="form-group">
-            <label for="{{ form.timeline_type.id_for_label }}">Timeline Type</label>
-            {{ form.timeline_type }}
-            {{ form.timeline_type.errors }}
-        </div>
-        
-        <div id="fixed-date-group" class="form-group" style="display: none;">
-            <label for="{{ form.fixed_date.id_for_label }}">Fixed Date</label>
-            {{ form.fixed_date }}
-            {{ form.fixed_date.errors }}
-        </div>
-        
-        <div id="duration-group" class="form-row" style="display: none;">
-            <div class="form-group">
-                <label for="{{ form.duration_start.id_for_label }}">Start Date</label>
-                {{ form.duration_start }}
-                {{ form.duration_start.errors }}
-            </div>
-            <div class="form-group">
-                <label for="{{ form.duration_end.id_for_label }}">End Date</label>
-                {{ form.duration_end }}
-                {{ form.duration_end.errors }}
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label for="{{ form.image.id_for_label }}">Image</label>
+            {{ form.image.label_tag }}
             {{ form.image }}
             {{ form.image.errors }}
-            {% if gig.image %}
-                <div class="current-image">
-                    <p>Current Image:</p>
-                    <img src="{{ gig.image.url }}" alt="Current gig image" style="max-width: 200px;">
-                </div>
-            {% endif %}
         </div>
         
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-            <a href="{% url 'gig_detail' gig.id %}" class="btn btn-secondary">Cancel</a>
-            {% if gig %}
-                <a href="{% url 'delete_gig' gig.id %}" class="btn btn-danger">Delete Gig</a>
-            {% endif %}
+            <button type="submit" class="btn btn-primary">
+                {% if creating_new %}Create Gig{% else %}Update Gig{% endif %}
+            </button>
+            <a href="{% if creating_new %}{% url 'home' %}{% else %}{% url 'gig_detail' gig_id=gig.id %}{% endif %}" 
+               class="btn btn-secondary">
+                Cancel
+            </a>
         </div>
     </form>
 </div>
@@ -98,27 +102,40 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const timelineType = document.getElementById('id_timeline_type');
-    const fixedDateGroup = document.getElementById('fixed-date-group');
-    const durationGroup = document.getElementById('duration-group');
-    
-    function updateTimelineFields() {
-        if (timelineType.value === 'fixed') {
-            fixedDateGroup.style.display = 'block';
-            durationGroup.style.display = 'none';
+    const fixedDateFields = document.getElementById('fixedDateFields');
+    const durationFields = document.getElementById('durationFields');
+
+    // Initialize fields based on current selection
+    function initTimelineFields() {
+        // Show the correct fields based on initial value
+        if (timelineType.value === 'fixed_date') {
+            fixedDateFields.style.display = 'block';
+            durationFields.style.display = 'none';
         } else if (timelineType.value === 'duration') {
-            fixedDateGroup.style.display = 'none';
-            durationGroup.style.display = 'flex';
+            fixedDateFields.style.display = 'none';
+            durationFields.style.display = 'block';
         } else {
-            fixedDateGroup.style.display = 'none';
-            durationGroup.style.display = 'none';
+            fixedDateFields.style.display = 'none';
+            durationFields.style.display = 'none';
         }
     }
-    
-    // Initialize on page load
-    updateTimelineFields();
-    
-    // Update on change
-    timelineType.addEventListener('change', updateTimelineFields);
+
+    // Call immediately when page loads
+    initTimelineFields();
+
+    // Update on selection change
+    timelineType.addEventListener('change', function() {
+        if (this.value === 'fixed_date') {
+            fixedDateFields.style.display = 'block';
+            durationFields.style.display = 'none';
+        } else if (this.value === 'duration') {
+            fixedDateFields.style.display = 'none';
+            durationFields.style.display = 'block';
+        } else {
+            fixedDateFields.style.display = 'none';
+            durationFields.style.display = 'none';
+        }
+    });
 });
 </script>
 {% endblock %}

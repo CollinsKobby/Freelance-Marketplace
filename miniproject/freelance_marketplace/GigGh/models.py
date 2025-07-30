@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import FileExtensionValidator
+from freelance_marketplace import settings
+from django.conf import settings
 
 # Create your models here.
 
@@ -41,8 +43,8 @@ class User(AbstractUser):
 
 class Gig(models.Model):
     class TimelineType(models.TextChoices):
-        FIXED_DATE = 'FIXED_DATE', 'Fixed Date'
-        DURATION = 'DURATION', 'Duration'
+        FIXED_DATE = 'fixed_date', 'Fixed Date'
+        DURATION = 'duration', 'Duration'
 
     class Status(models.TextChoices):
         OPEN = 'open', 'Open'
@@ -54,7 +56,7 @@ class Gig(models.Model):
         WRITING = 'writing', 'Writing'
         ADMINISTRATIVE = 'administrative', 'Administrative'
 
-    seller = models.ForeignKey(User, on_delete=models.CASCADE)
+    seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='gigs')
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -82,11 +84,6 @@ class Gig(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def save(self, *args, **kwargs):
-        if not self.id:  
-            self.seller = kwargs.pop('seller', None)
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return self.title
     
@@ -94,7 +91,11 @@ class Gig(models.Model):
 class Bid(models.Model):
     id = models.AutoField(primary_key=True)
     gigId = models.ForeignKey('Gig', on_delete=models.CASCADE, related_name='bids')
-    freelancer = models.ForeignKey(User, on_delete=models.CASCADE)
+    freelancer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='bids'
+    )
     biddingAmount = models.DecimalField(max_digits=10, decimal_places=2)
     biddingCurrency = models.CharField(max_length=10, default='GHS')
     

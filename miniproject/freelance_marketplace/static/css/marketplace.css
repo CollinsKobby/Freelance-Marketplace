@@ -1,5 +1,4 @@
 /* Form Styles */
-/* Form Styles */
 .form-container {
     max-width: 800px;
     margin: 2rem auto;
@@ -48,11 +47,42 @@
     margin-top: 2rem;
 }
 
+.timeline-fields {
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+}
+
+input[type="date"] {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+}
+
 .current-image {
     margin-top: 1rem;
     padding: 1rem;
     background: #f9f9f9;
     border-radius: 4px;
+}
+
+.logout-button {
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    /* Add any other styles to match your other links */
 }
 
 /* Gig Detail Styles */
@@ -323,7 +353,7 @@
 .hero-content p {
     font-size: 1.2rem;
     margin-bottom: 2rem;
-    color: var(--dark-gray);
+    color: black;
 }
 
 .hero-buttons {
@@ -573,13 +603,13 @@
 .profile-tabs a {
     padding: 1rem 1.5rem;
     text-decoration: none;
-    color: var(--dark-gray);
+    color: #964B00;
     font-weight: 500;
     position: relative;
 }
 
 .profile-tabs a.active {
-    color: var(--primary-color);
+    color: #032b44;
     font-weight: bold;
 }
 

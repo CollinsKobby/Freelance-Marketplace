@@ -33,6 +33,38 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+
+    document.getElementById('gigForm').addEventListener('submit', function(e) {
+        const timelineType = document.getElementById('id_timeline_type').value;
+        const startingPrice = parseFloat(document.getElementById('id_starting_price').value);
+        const endingPrice = parseFloat(document.getElementById('id_ending_price').value);
+        
+        // Validate timeline
+        if (timelineType === 'fixed_date') {
+            const fixedDate = document.getElementById('id_timeline_fixed_date').value;
+            if (!fixedDate) {
+                alert('Please select a fixed date');
+                e.preventDefault();
+                return;
+            }
+        } else if (timelineType === 'duration') {
+            const startDate = document.getElementById('id_timeline_duration_start').value;
+            const endDate = document.getElementById('id_timeline_duration_end').value;
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                e.preventDefault();
+                return;
+            }
+        }
+        
+        // Validate prices
+        if (endingPrice < startingPrice) {
+            alert('Ending price must be greater than starting price');
+            e.preventDefault();
+        }
+    });
+    
+
     // Bid amount validation
     const bidForms = document.querySelectorAll('form[action*="bid"]');
     bidForms.forEach(form => {

@@ -16,8 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from GigGh import views
 
 urlpatterns = [
     path('', include('GigGh.urls')),
     path('admin/', admin.site.urls),
+    path('registration/login/', views.login_View, name='login'),
+    path('registration/signup/', views.signup, name='signup'),
+    path('registration/logout/', views.logout_view, name='logout'),
 ]

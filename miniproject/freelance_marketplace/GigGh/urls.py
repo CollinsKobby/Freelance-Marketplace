@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
-from .views import CustomLoginView, signup
+from .views import login_View, signup, logout_view
 from django.conf import settings  # For accessing MEDIA_URL and MEDIA_ROOT
 from django.conf.urls.static import static  # For serving files during development
 
@@ -16,9 +16,9 @@ urlpatterns = [
     path('bids/<int:bid_id>/accept/', views.accept_bid, name='accept_bid'),
     path('gigs/<int:gig_id>/submit/', views.submit_work, name='submit_work'),
     path('gigs/<int:gig_id>/chat/', views.send_chat, name='send_chat'),
-    path('login/', CustomLoginView.as_view(), name='login'),
-    path('signup/', signup, name='signup'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('login/', views.login_View, name='login'),
+    path('signup/', views.signup, name='signup'),
+    path('logout/', views.logout_view, name='logout'),
     
     # Password reset URLs
     path('password-reset/',

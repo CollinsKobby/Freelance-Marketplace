@@ -9,7 +9,7 @@
             <p>Create your freelancer or client account</p>
         </div>
 
-        <form method="post" class="auth-form">
+        <form method="post" action="{% url 'signup' %}" class="auth-form">
             {% csrf_token %}
             
             {% if form.errors %}

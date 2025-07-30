@@ -49,11 +49,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Initialize tooltips
-    tippy('[data-tippy-content]', {
-        arrow: true,
-        animation: 'shift-away',
-        duration: 200,
-    });
+    if (typeof tippy !== 'undefined') {
+        tippy('[data-tippy-content]', {
+            arrow: true,
+            animation: 'shift-away',
+            duration: 200,
+        })
+    };
 
     // Back to top button
     const backToTop = document.getElementById('back-to-top');

@@ -3,21 +3,67 @@
 {% block content %}
 <div class="form-container">
     <h2>Place Bid on "{{ gig.title }}"</h2>
-    <form method="post">
+    
+    {% if show_errors %}
+    <div class="alert alert-danger">
+        {% if form.non_field_errors %}
+            {{ form.non_field_errors }}
+        {% else %}
+            Please correct the errors below
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <form method="post" novalidate>
         {% csrf_token %}
+        
         <div class="form-group">
-            <label for="id_amount">Your Bid Amount ({{ gig.currency }})</label>
-            {{ form.amount }}
-            {{ form.amount.errors }}
+            <label for="id_biddingAmount">Bid Amount</label>
+            <input type="number" 
+                   name="biddingAmount" 
+                   id="id_biddingAmount"
+                   class="form-control"
+                   min="0.01"
+                   step="0.01"
+                   required
+                   value="{{ form.biddingAmount.value|default_if_none:'' }}">
+            {% if form.biddingAmount.errors %}
+            <div class="text-danger">
+                {% for error in form.biddingAmount.errors %}
+                <small>{{ error }}</small><br>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
+        
         <div class="form-group">
             <label for="id_notes">Notes (Optional)</label>
             {{ form.notes }}
         </div>
+        
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Submit Bid</button>
-            <a href="{% url 'gig_detail' gig.id %}" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Submit Bid</button>
+            <a href="{% url 'gig_detail' gig.id %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    
+    form.addEventListener('submit', function(e) {
+        const amountInput = document.getElementById('id_biddingAmount');
+        const amount = parseFloat(amountInput.value);
+        
+        if (isNaN(amount) || amount <= 0) {
+            alert('Please enter a valid bid amount (greater than zero)');
+            e.preventDefault();
+            return;
+        }
+    });
+});
+</script>
 {% endblock %}

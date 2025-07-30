@@ -2,24 +2,58 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Gig, Bid, Submission, Chat
 from django.contrib import messages
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.views import LoginView
+from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import GigForm, BidForm, SubmissionForm, ChatForm, LoginForm, SignupForm, EditProfileForm
+from django.views import View
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
-class CustomLoginView(LoginView):
-    form_class = LoginForm
-    template_name = 'registration/login.html'
+#class CustomLoginView(LoginView):
+#    form_class = LoginForm
+#    template_name = 'registration/login.html'
 
 def signup(request):
     if request.method == 'POST':
+        print("Form submitted!")  # Debug
         form = SignupForm(request.POST)
+        print("Form errors:", form.errors)  # Debug
         if form.is_valid():
+            print("Form is valid!")  # Debug
             user = form.save()
+            print("User created:", user.username)  # Debug
             login(request, user)
             return redirect('home')
+        else:
+            print("Form invalid:", form.errors)  # Debug
     else:
         form = SignupForm()
     return render(request, 'registration/signup.html', {'form': form})
+
+
+def login_View(request):
+    error_message = None
+
+    if request.method == 'POST':
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            next_url = request.POST.get('next') or request.GET.get('next') or 'home'
+            return redirect(next_url)
+        else:
+            error_message = "Invalid Credentials"
+    return render(request, 'registration/login.html', {'error' : error_message})
+
+
+def logout_view(request):
+    if request.method == 'POST':
+        logout(request)
+        return redirect('login')
+    else:
+        return redirect('home')
 
 #@login_required
 def home(request):
@@ -58,19 +92,27 @@ def edit_profile(request):
         'active_tab': 'settings'
     })
 
-#login_required
+@login_required
 def create_gig(request):
     if request.method == 'POST':
         form = GigForm(request.POST, request.FILES)
         if form.is_valid():
             gig = form.save(commit=False)
-            gig.seller = request.user
+            gig.seller_id = request.user.id
             gig.save()
             messages.success(request, "Gig created successfully!")
             return redirect('gig_detail', gig_id=gig.id)
+        else:
+            print("Form errors:", form.errors)
     else:
         form = GigForm()
-    return render(request, 'marketplace/gig_form.html', {'form': form})
+    
+    return render(request, 'marketplace/gig_form.html', {
+        'form': form,
+        'creating_new': True,
+        'title': 'Create New Gig'
+    })
+
 
 @login_required
 def edit_gig(request, gig_id):
@@ -88,6 +130,7 @@ def edit_gig(request, gig_id):
     context = {
         'form': form,
         'gig': gig,
+        'creating_new': False,  # This tells template it's an edit form
         'title': f'Edit {gig.title}'
     }
     return render(request, 'marketplace/gig_form.html', context)
@@ -114,20 +157,30 @@ def gig_detail(request, gig_id):
     }
     return render(request, 'marketplace/gig_detail.html', context)
 
-#@login_required
+@login_required
 def place_bid(request, gig_id):
     gig = get_object_or_404(Gig, id=gig_id)
+    
     if request.method == 'POST':
-        form = BidForm(request.POST)
+        form = BidForm(request.POST, gig=gig, freelancer=request.user)
+        
         if form.is_valid():
-            bid = form.save(commit=False)
-            bid.gig = gig
-            bid.freelancer = request.user
-            bid.save()
-            return redirect('gig_detail', gig_id=gig.id)
+            try:
+                bid = form.save()
+                messages.success(request, "Bid submitted successfully!")
+                return redirect('gig_detail', gig_id=gig.id)
+            except ValidationError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, "Please correct the errors below")
     else:
-        form = BidForm()
-    return render(request, 'marketplace/bid_form.html', {'form': form, 'gig': gig})
+        form = BidForm(gig=gig, freelancer=request.user)
+    
+    return render(request, 'marketplace/bid_form.html', {
+        'form': form,
+        'gig': gig
+    })
+
 
 #@login_required
 def accept_bid(request, bid_id):

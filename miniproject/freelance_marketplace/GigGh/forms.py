@@ -2,63 +2,109 @@ from django import forms
 from .models import Gig, Bid, Submission, Chat
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth import get_user_model
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, MinValueValidator
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 class GigForm(forms.ModelForm):
     class Meta:
         model = Gig
-        fields = [
-            'title',
-            'description',
-            'category',
-            'starting_price',
-            'ending_price',
-            'currency',
-            'timeline_type',
-            'timeline_fixed_date',
-            'timeline_duration_start',
-            'timeline_duration_end',
-            'image'
-        ]
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 5}),
-            'timeline_fixed_date': forms.DateInput(attrs={'type': 'date'}),
-            'timeline_duration_start': forms.DateInput(attrs={'type': 'date'}),
-            'timeline_duration_end': forms.DateInput(attrs={'type': 'date'}),
-        }
+        exclude = ['seller'] 
+        fields = ['title', 'description', 'category', 'timeline_type',
+                 'timeline_fixed_date', 'timeline_duration_start',
+                 'timeline_duration_end', 'starting_price', 
+                 'ending_price', 'image']
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Ensure timeline_type choices match model
+        self.fields['timeline_type'].choices = Gig.TimelineType
+        
+        # Set required fields
+        self.fields['title'].required = True
+        self.fields['description'].required = True
+        self.fields['timeline_type'].required = True
+        
+        # Set widget attributes
+        self.fields['starting_price'].widget.attrs.update({
+            'min': '0.01',
+            'step': '0.01'
+        })
+        self.fields['ending_price'].widget.attrs.update({
+            'min': '0.01',
+            'step': '0.01'
+        })
+
     def clean(self):
         cleaned_data = super().clean()
         timeline_type = cleaned_data.get('timeline_type')
-        timeline_fixed_date = cleaned_data.get('fixed_date')
-        timeline_duration_start = cleaned_data.get('duration_start')
-        timeline_duration_end = cleaned_data.get('duration_end')
         
-        if timeline_type == 'fixed' and not timeline_fixed_date:
-            self.add_error('fixed_date', 'Please select a fixed date')
+        # Validate timeline fields
+        if timeline_type == 'fixed_date' and not cleaned_data.get('timeline_fixed_date'):
+            self.add_error('timeline_fixed_date', 'This field is required')
         elif timeline_type == 'duration':
-            if not timeline_duration_start or not timeline_duration_end:
-                self.add_error('duration_start', 'Please select start and end dates')
-            elif timeline_duration_start >= timeline_duration_end:
-                self.add_error('duration_end', 'End date must be after start date')
+            if not cleaned_data.get('timeline_duration_start'):
+                self.add_error('timeline_duration_start', 'This field is required')
+            if not cleaned_data.get('timeline_duration_end'):
+                self.add_error('timeline_duration_end', 'This field is required')
         
+        # Validate prices
         starting_price = cleaned_data.get('starting_price')
         ending_price = cleaned_data.get('ending_price')
-        if ending_price and starting_price > ending_price:
-            self.add_error('ending_price', 'Ending price must be higher than starting price')
+        if starting_price and ending_price and ending_price < starting_price:
+            self.add_error('ending_price', 'Must be greater than starting price')
         
         return cleaned_data
+    
 
-class BidForm(forms.ModelForm):
-    notes = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=False)
+class BidForm(forms.Form):
+    biddingAmount = forms.DecimalField(
+        validators=[MinValueValidator(0.01)],
+        widget=forms.NumberInput(attrs={
+            'min': '0.01',
+            'step': '0.01',
+            'class': 'form-control',
+            'required': True
+        })
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3
+        })
+    )
 
-    class Meta:
-        model = Bid
-        fields = ['biddingAmount', 'notes', 'biddingCurrency']
-        widgets = {
-            'biddingAmount': forms.NumberInput(attrs={'min': 0}),
-        }
+    def __init__(self, *args, **kwargs):
+        self.gig = kwargs.pop('gig', None)
+        self.freelancer = kwargs.pop('freelancer', None)
+        super().__init__(*args, **kwargs)
 
+    def clean(self):
+        """Ensure all required data exists before saving"""
+        cleaned_data = super().clean()
+        if not cleaned_data.get('biddingAmount'):
+            raise ValidationError("Bid amount is required")
+        return cleaned_data
+
+    def save(self):
+        """Safely create and save Bid instance"""
+        if not hasattr(self, 'cleaned_data'):
+            raise ValidationError("Form must be validated first")
+            
+        if 'biddingAmount' not in self.cleaned_data:
+            raise ValidationError("Missing bidding amount in form data")
+            
+        if not self.freelancer:
+            raise ValidationError("Freelancer must be provided")
+
+        return Bid.objects.create(
+            biddingAmount=self.cleaned_data['biddingAmount'],
+            gigId=self.gig,
+            freelancer=self.freelancer
+        )
+        
 class SubmissionForm(forms.ModelForm):
     class Meta:
         model = Submission
@@ -85,26 +131,31 @@ class LoginForm(AuthenticationForm):
     }))
 
 class SignupForm(UserCreationForm):
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={
-        'class': 'form-control',
-        'placeholder': 'Email'
-    }))
-    username = forms.CharField(widget=forms.TextInput(attrs={
-        'class': 'form-control',
-        'placeholder': 'Username'
-    }))
-    password1 = forms.CharField(widget=forms.PasswordInput(attrs={
-        'class': 'form-control',
-        'placeholder': 'Password'
-    }))
-    password2 = forms.CharField(widget=forms.PasswordInput(attrs={
-        'class': 'form-control',
-        'placeholder': 'Confirm Password'
-    }))
-
+    email = forms.EmailField(required=True)
+    
     class Meta:
         model = User
         fields = ('username', 'email', 'password1', 'password2')
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add your custom attributes
+        self.fields['username'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Username'
+        })
+        self.fields['email'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Email'
+        })
+        self.fields['password1'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Password'
+        })
+        self.fields['password2'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Confirm Password'
+        })
 
 class EditProfileForm(forms.ModelForm):
     profile_picture = forms.ImageField(
