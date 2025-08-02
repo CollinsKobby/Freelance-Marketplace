@@ -75,11 +75,32 @@ class BidForm(forms.Form):
             'rows': 3
         })
     )
+    attachment = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'form-control-file',
+            'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png'
+        })
+    )
+
+
+    class Meta:
+            model = Bid
+            fields = ['biddingAmount', 'notes', 'attachment']
+
 
     def __init__(self, *args, **kwargs):
+        # Extract custom arguments before calling parent's __init__
         self.gig = kwargs.pop('gig', None)
         self.freelancer = kwargs.pop('freelancer', None)
         super().__init__(*args, **kwargs)
+        
+        # Customize form fields if needed
+        self.fields['attachment'].required = False
+        self.fields['attachment'].widget.attrs.update({
+            'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
+            'class': 'form-control-file'
+        })
 
     def clean(self):
         """Ensure all required data exists before saving"""
@@ -104,6 +125,7 @@ class BidForm(forms.Form):
             gigId=self.gig,
             freelancer=self.freelancer
         )
+
         
 class SubmissionForm(forms.ModelForm):
     class Meta:

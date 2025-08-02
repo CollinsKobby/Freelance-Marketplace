@@ -37,12 +37,14 @@
         {% for bid in bids %}
         <div class="bid-card {% if bid.status == 'accepted' %}accepted{% endif %}">
             <div class="bid-header">
-                <span class="bidder">{{ bid.freelancer.username }}</span>
+                <a href="{% url 'bid_detail' bid.id %}" class="bidder">
+                    {{ bid.freelancer.username }}
+                </a>
                 <span class="bid-amount">{{ bid.amount }} {{ bid.currency }}</span>
             </div>
             {% if bid.notes %}
             <div class="bid-notes">
-                <p>{{ bid.notes }}</p>
+                <p>{{ bid.notes|truncatechars:100 }}</p>
             </div>
             {% endif %}
             {% if user == gig.seller and gig.status == 'open' %}

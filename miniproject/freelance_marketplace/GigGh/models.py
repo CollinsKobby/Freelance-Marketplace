@@ -98,13 +98,20 @@ class Bid(models.Model):
     )
     biddingAmount = models.DecimalField(max_digits=10, decimal_places=2)
     biddingCurrency = models.CharField(max_length=10, default='GHS')
-    
+    attachment = models.FileField(
+        upload_to='bid_attachments/',
+        null=True,
+        blank=True,
+        verbose_name='Attachment'
+    )
+    attachment_name = models.CharField(max_length=255, blank=True)
     STATUS_CHOICES = [
-        ('opened', 'Opened'),
+        ('pending', 'Pending'),
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
+        ('canceled', 'Canceled'),
     ]
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='opened')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="bid-detail-container">
+    <h2>Bid Details</h2>
+    <div class="bid-info">
+        <p><strong>Freelancer:</strong> {{ bid.freelancer.username }}</p>
+        <p><strong>Amount:</strong> {{ bid.amount }} {{ bid.currency }}</p>
+        <p><strong>Submitted:</strong> {{ bid.created_at|date:"F j, Y" }}</p>
+        
+        <div class="bid-notes">
+            <h3>Notes</h3>
+            <p>{{ bid.notes }}</p>
+        </div>
+        
+        {% if bid.attachment %}
+        <div class="bid-attachment">
+            <h4>Attachment:</h4>
+            <a href="{{ bid.attachment.url }}" target="_blank">
+                {{ bid.attachment_name|default:"Download File" }}
+            </a>
+            <small>({{ bid.attachment.size|filesizeformat }})</small>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="bid-actions">
+        {% if user == gig.seller and gig.status == 'open' %}
+        <form method="post" action="{% url 'accept_bid' bid.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary">Accept Bid</button>
+        </form>
+        {% endif %}
+        
+        {% if user == bid.freelancer or user == gig.seller %}
+        <form method="post" action="{% url 'cancel_bid' bid.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-danger">Cancel Bid</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

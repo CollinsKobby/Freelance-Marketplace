@@ -9,6 +9,7 @@ from .forms import GigForm, BidForm, SubmissionForm, ChatForm, LoginForm, Signup
 from django.views import View
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.http import HttpResponseForbidden
 
 #class CustomLoginView(LoginView):
 #    form_class = LoginForm
@@ -168,13 +169,14 @@ def place_bid(request, gig_id):
             try:
                 bid = form.save()
                 messages.success(request, "Bid submitted successfully!")
+                bid.save()
                 return redirect('gig_detail', gig_id=gig.id)
             except ValidationError as e:
                 messages.error(request, str(e))
         else:
             messages.error(request, "Please correct the errors below")
     else:
-        form = BidForm(gig=gig, freelancer=request.user)
+        form = BidForm()
     
     return render(request, 'marketplace/bid_form.html', {
         'form': form,
@@ -182,18 +184,75 @@ def place_bid(request, gig_id):
     })
 
 
-#@login_required
+@login_required
+def bid_detail(request, bid_id):
+    bid = get_object_or_404(Bid, id=bid_id)
+    gig = bid.gigId
+    
+    # Only allow gig owner or bid creator to view
+    if request.user != gig.seller and request.user != bid.freelancer:
+        return HttpResponseForbidden("You don't have permission to view this bid")
+    
+    return render(request, 'marketplace/bid_detail.html', {
+        'bid': bid,
+        'gig': gig
+    })
+
+
+@login_required
 def accept_bid(request, bid_id):
     bid = get_object_or_404(Bid, id=bid_id)
+    
+    # Permission check - only gig owner can accept bids
     if request.user != bid.gig.seller:
-        return redirect('home')
+        messages.error(request, "You don't have permission to accept bids for this gig")
+        return redirect('gig_detail', gig_id=bid.gig.id)
+    
+    # Only allow accepting bids for open gigs
+    if bid.gig.status != 'open':
+        messages.error(request, "Cannot accept bids for closed gigs")
+        return redirect('gig_detail', gig_id=bid.gig.id)
     
     # Update all bids for this gig
     Bid.objects.filter(gig=bid.gig).update(status='rejected')
     bid.status = 'accepted'
     bid.save()
     
+    # Close the gig after accepting a bid
+    bid.gig.status = 'closed'
+    bid.gig.save()
+    
+    messages.success(request, f"Bid from {bid.freelancer.username} accepted successfully!")
     return redirect('gig_detail', gig_id=bid.gig.id)
+
+
+@login_required
+def cancel_bid(request, bid_id):
+    bid = get_object_or_404(Bid, id=bid_id)
+    
+    # Permission check - only bid creator or gig owner can cancel
+    if request.user not in [bid.freelancer, bid.gig.seller]:
+        messages.error(request, "You don't have permission to cancel this bid")
+        return redirect('gig_detail', gig_id=bid.gig.id)
+    
+    # Only allow canceling pending bids
+    if bid.status != 'pending':
+        messages.error(request, "Only pending bids can be canceled")
+        return redirect('gig_detail', gig_id=bid.gig.id)
+    
+    # If gig owner is canceling an accepted bid, reopen the gig
+    if bid.status == 'accepted' and request.user == bid.gig.seller:
+        bid.gig.status = 'open'
+        bid.gig.save()
+    
+    bid.status = 'canceled'
+    bid.save()
+    
+    actor = "You" if request.user == bid.freelancer else f"{bid.gig.seller.username}"
+    messages.success(request, f"{actor} canceled the bid from {bid.freelancer.username}")
+    return redirect('gig_detail', gig_id=bid.gig.id)
+
+
 
 #@login_required
 def submit_work(request, gig_id):
