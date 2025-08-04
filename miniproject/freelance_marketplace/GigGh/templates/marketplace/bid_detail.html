@@ -1,40 +1,48 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="bid-detail-container">
+<div class="bid-detail-container form-container">
     <h2>Bid Details</h2>
     <div class="bid-info">
         <p><strong>Freelancer:</strong> {{ bid.freelancer.username }}</p>
-        <p><strong>Amount:</strong> {{ bid.amount }} {{ bid.currency }}</p>
+        <p><strong>Amount:</strong> {{ bid.biddingAmount }} {{ bid.biddingCurrency }}</p>
         <p><strong>Submitted:</strong> {{ bid.created_at|date:"F j, Y" }}</p>
         
+        {# Notes Section - Only show if notes exist #}
+        {% if bid.notes and bid.notes.strip %}
         <div class="bid-notes">
             <h3>Notes</h3>
             <p>{{ bid.notes }}</p>
         </div>
+        {% endif %}
         
-        {% if bid.attachment %}
+        {# Attachment Section - More robust checking #}
+        {% if bid.attachment and bid.attachment.url %}
         <div class="bid-attachment">
             <h4>Attachment:</h4>
-            <a href="{{ bid.attachment.url }}" target="_blank">
-                {{ bid.attachment_name|default:"Download File" }}
+            <a href="{{ bid.attachment.url }}" target="_blank" class="attachment-link">
+                {% if bid.attachment_name %}
+                    {{ bid.attachment_name }}
+                {% else %}
+                    Download Attachment
+                {% endif %}
             </a>
-            <small>({{ bid.attachment.size|filesizeformat }})</small>
+            <small class="file-size">({{ bid.attachment.size|filesizeformat }})</small>
         </div>
         {% endif %}
     </div>
 
     <div class="bid-actions">
-        {% if user == gig.seller and gig.status == 'open' %}
+        {% if user == bid.gigId.seller and bid.gigId.status == 'open' %}
         <form method="post" action="{% url 'accept_bid' bid.id %}">
             {% csrf_token %}
-            <button type="submit" class="btn-primary">Accept Bid</button>
+            <button type="submit" class="btn btn-primary">Accept Bid</button>
         </form>
         {% endif %}
         
-        {% if user == bid.freelancer or user == gig.seller %}
+        {% if user == bid.freelancer or user == bid.gigId.seller %}
         <form method="post" action="{% url 'cancel_bid' bid.id %}">
             {% csrf_token %}
-            <button type="submit" class="btn-danger">Cancel Bid</button>
+            <button type="submit" class="btn btn-danger">Cancel Bid</button>
         </form>
         {% endif %}
     </div>

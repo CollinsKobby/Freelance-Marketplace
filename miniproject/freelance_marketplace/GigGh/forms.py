@@ -57,75 +57,48 @@ class GigForm(forms.ModelForm):
         
         return cleaned_data
     
-
-class BidForm(forms.Form):
-    biddingAmount = forms.DecimalField(
-        validators=[MinValueValidator(0.01)],
-        widget=forms.NumberInput(attrs={
-            'min': '0.01',
-            'step': '0.01',
-            'class': 'form-control',
-            'required': True
-        })
-    )
-    notes = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={
-            'class': 'form-control',
-            'rows': 3
-        })
-    )
-    attachment = forms.FileField(
-        required=False,
-        widget=forms.ClearableFileInput(attrs={
-            'class': 'form-control-file',
-            'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png'
-        })
-    )
-
-
+class BidForm(forms.ModelForm):
     class Meta:
-            model = Bid
-            fields = ['biddingAmount', 'notes', 'attachment']
-
+        model = Bid
+        fields = ['biddingAmount', 'notes', 'attachment']  # Removed biddingCurrency
+        widgets = {
+            'biddingAmount': forms.NumberInput(attrs={
+                'min': '0.01',
+                'step': '0.01',
+                'class': 'form-control',
+                'required': True
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3
+            }),
+            'attachment': forms.ClearableFileInput(attrs={
+                'class': 'form-control-file',
+                'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png'
+            })
+        }
 
     def __init__(self, *args, **kwargs):
-        # Extract custom arguments before calling parent's __init__
         self.gig = kwargs.pop('gig', None)
         self.freelancer = kwargs.pop('freelancer', None)
         super().__init__(*args, **kwargs)
         
-        # Customize form fields if needed
+        # Make fields optional
+        self.fields['notes'].required = False
         self.fields['attachment'].required = False
-        self.fields['attachment'].widget.attrs.update({
-            'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
-            'class': 'form-control-file'
-        })
 
-    def clean(self):
-        """Ensure all required data exists before saving"""
-        cleaned_data = super().clean()
-        if not cleaned_data.get('biddingAmount'):
-            raise ValidationError("Bid amount is required")
-        return cleaned_data
-
-    def save(self):
-        """Safely create and save Bid instance"""
-        if not hasattr(self, 'cleaned_data'):
-            raise ValidationError("Form must be validated first")
-            
-        if 'biddingAmount' not in self.cleaned_data:
-            raise ValidationError("Missing bidding amount in form data")
-            
-        if not self.freelancer:
-            raise ValidationError("Freelancer must be provided")
-
-        return Bid.objects.create(
-            biddingAmount=self.cleaned_data['biddingAmount'],
-            gigId=self.gig,
-            freelancer=self.freelancer
-        )
-
+    def save(self, commit=True):
+        bid = super().save(commit=False)
+        bid.gigId = self.gig
+        bid.freelancer = self.freelancer
+        bid.biddingCurrency = 'GHS'  # Set default currency
+        
+        if 'attachment' in self.cleaned_data and self.cleaned_data['attachment']:
+            bid.attachment_name = self.cleaned_data['attachment'].name
+        
+        if commit:
+            bid.save()
+        return bid
         
 class SubmissionForm(forms.ModelForm):
     class Meta:

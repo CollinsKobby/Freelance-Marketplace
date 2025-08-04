@@ -1,0 +1,18 @@
+<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern geometric "G" icon -->
+  <g transform="translate(15, 15)">
+    <!-- Outer circle -->
+    <circle cx="25" cy="25" r="23" fill="none" stroke="#1F2937" stroke-width="4"/>
+    <!-- Inner geometric G shape -->
+    <path d="M 25 5 
+             A 20 20 0 1 1 25 45
+             L 25 30
+             L 35 30" 
+          fill="none" 
+          stroke="#FBBF24" 
+          stroke-width="4" 
+          stroke-linecap="round"/>
+    <!-- Small dot for "gig" concept -->
+    <circle cx="40" cy="15" r="3" fill="#FBBF24"/>
+  </g>
+</svg>

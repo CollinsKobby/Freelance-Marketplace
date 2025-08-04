@@ -98,6 +98,7 @@ class Bid(models.Model):
     )
     biddingAmount = models.DecimalField(max_digits=10, decimal_places=2)
     biddingCurrency = models.CharField(max_length=10, default='GHS')
+    notes = models.TextField(blank=True, null=True)
     attachment = models.FileField(
         upload_to='bid_attachments/',
         null=True,
