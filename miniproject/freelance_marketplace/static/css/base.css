@@ -49,7 +49,7 @@ a:hover {
 /* Header */
 .site-header {
     background-color: #c3d1c1;
-    padding: 0.5rem 1rem;
+    padding-left: 0.5rem;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -222,9 +222,70 @@ a:hover {
 footer {
     background-color: var(--secondary-color);
     color: var(--text-light);
-    text-align: center;
+    padding: 1.5rem 0;
+    margin-top: auto;
+    font-size: 0.9rem;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.footer-links {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.footer-link {
+    color: var(--text-light);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.logout-form {
+    display: inline;
+    margin: 0;
     padding: 0;
-    margin-top: auto; 
+}
+
+.logout-button {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+.logout-button:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .footer-links {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
 }
 
 /* Utility Classes */

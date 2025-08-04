@@ -68,10 +68,39 @@ def home(request):
 def profile(request):
     user = request.user
     posted_gigs = Gig.objects.filter(seller=user).order_by('-created_at')
-    bids = Bid.objects.filter(freelancer=user).select_related('gig')
+    bids = Bid.objects.filter(freelancer=user).select_related('gigId').filter(gigId__isnull=False).order_by('-created_at')
+    recent_gigs = request.user.gigs.order_by('-created_at')[:5]
+    recent_bids = request.user.bids.select_related('gigId').order_by('-created_at')[:5]
+    
+    # Combine and sort activities
+    activities = []
+    
+    for gig in recent_gigs:
+        activities.append({
+            'type': 'gig',
+            'title': gig.title,
+            'gig_id': gig.id,
+            'timestamp': gig.created_at,
+            'status': None
+        })
+    
+    for bid in recent_bids:
+        activities.append({
+            'type': 'bid',
+            'amount': bid.biddingAmount,
+            'currency': bid.biddingCurrency,
+            'gig_id': bid.gigId.id,
+            'gig_title': bid.gigId.title,
+            'timestamp': bid.created_at,
+            'status': bid.status
+        })
+    
+    # Sort combined activities by timestamp
+    recent_activities = sorted(activities, key=lambda x: x['timestamp'], reverse=True)[:10]
     
     context = {
         'user': user,
+        'recent_activities': recent_activities,
         'posted_gigs': posted_gigs,
         'bids': bids,
         'active_tab': request.GET.get('tab', 'overview')

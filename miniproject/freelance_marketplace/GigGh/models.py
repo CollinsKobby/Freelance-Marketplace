@@ -90,7 +90,7 @@ class Gig(models.Model):
 
 class Bid(models.Model):
     id = models.AutoField(primary_key=True)
-    gigId = models.ForeignKey('Gig', on_delete=models.CASCADE, related_name='bids')
+    gigId = models.ForeignKey('Gig', on_delete=models.PROTECT, related_name='bids')
     freelancer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

@@ -45,45 +45,96 @@
     <!-- Tab Content -->
     <div class="profile-content">
         {% if active_tab == 'overview' %}
-            <div class="overview-section">
-                <h2>Recent Activity</h2>
-                <!-- Activity feed would go here -->
+        <div class="overview-section">
+            <h2>Recent Activity</h2>
+            <div class="activity-feed">
+                {% for activity in recent_activities %}
+                <div class="activity-item {% if activity.type == 'gig' %}gig-activity{% else %}bid-activity{% endif %}">
+                    <div class="activity-icon">
+                        {% if activity.type == 'gig' %}
+                        <i class="fas fa-bullhorn"></i>
+                        {% else %}
+                        <i class="fas fa-handshake"></i>
+                        {% endif %}
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-header">
+                            <span class="activity-type">
+                                {% if activity.type == 'gig' %}
+                                Posted Gig
+                                {% else %}
+                                Submitted Bid
+                                {% endif %}
+                            </span>
+                            <span class="activity-time">{{ activity.timestamp|timesince }} ago</span>
+                        </div>
+                        <div class="activity-details">
+                            {% if activity.type == 'gig' %}
+                            <a href="{% url 'gig_detail' activity.gig_id %}" class="activity-title">
+                                {{ activity.title }}
+                            </a>
+                            {% else %}
+                            <span class="activity-title">
+                                Bid of {{ activity.amount }} {{ activity.currency }} on 
+                                <a href="{% url 'gig_detail' activity.gig_id %}">
+                                    {{ activity.gig_title }}
+                                </a>
+                            </span>
+                            {% endif %}
+                            {% if activity.status %}
+                            <span class="activity-status badge {% if activity.status == 'accepted' %}badge-success{% else %}badge-secondary{% endif %}">
+                                {{ activity.status|title }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-activity">
+                    <p>No recent activity to show</p>
+                </div>
+                {% endfor %}
             </div>
+        </div>
             
         {% elif active_tab == 'gigs' %}
-            <div class="gigs-section">
-                <h2>My Posted Gigs</h2>
-                {% for gig in posted_gigs %}
-                <div class="gig-card">
-                    <h3><a href="{% url 'gig_detail' gig.id %}">{{ gig.title }}</a></h3>
-                    <p>{{ gig.description|truncatechars:150 }}</p>
-                    <div class="gig-meta">
-                        <span class="gig-status">{{ gig.get_status_display }}</span>
-                        <span class="gig-price">{{ gig.currency }} {{ gig.starting_price }} - {{ gig.ending_price }}</span>
-                        <span class="gig-date">{{ gig.created_at|date:"M d, Y" }}</span>
-                    </div>
+        <div class="gigs-section">
+            <h2>My Posted Gigs</h2>
+            {% for gig in posted_gigs %}
+            <div class="gig-card">
+                <h3><a href="{% url 'gig_detail' gig.id %}">{{ gig.title }}</a></h3>
+                <p>{{ gig.description|truncatechars:150 }}</p>
+                <div class="gig-meta">
+                    <span class="gig-status">{{ gig.get_status_display }}</span>
+                    <span class="gig-price">{{ gig.currency }} {{ gig.starting_price }} - {{ gig.ending_price }}</span>
+                    <span class="gig-date">{{ gig.created_at|date:"M d, Y" }}</span>
                 </div>
-                {% empty %}
-                <p>You haven't posted any gigs yet. <a href="{% url 'create_gig' %}">Post your first gig!</a></p>
-                {% endfor %}
             </div>
+            {% empty %}
+            <p>You haven't posted any gigs yet. <a href="{% url 'create_gig' %}">Post your first gig!</a></p>
+            {% endfor %}
+        </div>
             
         {% elif active_tab == 'bids' %}
-            <div class="bids-section">
-                <h2>My Bids</h2>
-                {% for bid in bids %}
-                <div class="bid-card {% if bid.status == 'accepted' %}accepted{% endif %}">
-                    <h3><a href="{% url 'gig_detail' bid.gig.id %}">{{ bid.gig.title }}</a></h3>
-                    <div class="bid-meta">
-                        <span class="bid-amount">{{ bid.currency }} {{ bid.amount }}</span>
-                        <span class="bid-status">{{ bid.get_status_display }}</span>
-                        <span class="bid-date">{{ bid.created_at|date:"M d, Y" }}</span>
-                    </div>
+        <div class="bids-section">
+            <h2>My Bids</h2>
+            {% for bid in bids %}
+            <div class="bid-card {% if bid.status == 'accepted' %}accepted{% endif %}">
+                <h3>
+                    <a href="{% url 'gig_detail' bid.gigId.id %}">
+                        {{ bid.gigId.title }}
+                    </a>
+                </h3>
+                <div class="bid-meta">
+                    <span class="bid-amount">{{ bid.biddingCurrency }} {{ bid.biddingAmount }}</span>
+                    <span class="bid-status">{{ bid.get_status_display }}</span>
+                    <span class="bid-date">{{ bid.created_at|date:"M d, Y" }}</span>
                 </div>
-                {% empty %}
-                <p>You haven't placed any bids yet.</p>
-                {% endfor %}
             </div>
+            {% empty %}
+            <p>You haven't placed any bids yet.</p>
+            {% endfor %}
+        </div>
             
         {% elif active_tab == 'settings' %}
             <div class="settings-section">
