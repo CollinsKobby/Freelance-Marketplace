@@ -222,7 +222,7 @@ a:hover {
 footer {
     background-color: var(--secondary-color);
     color: var(--text-light);
-    padding: 1.5rem 0;
+    padding: 0.75rem 0;
     margin-top: auto;
     font-size: 0.9rem;
 }

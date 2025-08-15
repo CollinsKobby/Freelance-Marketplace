@@ -33,8 +33,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-
-    document.getElementById('gigForm').addEventListener('submit', function(e) {
+    // Form validation
+    document.getElementById('gigForm')?.addEventListener('submit', function(e) {
         const timelineType = document.getElementById('id_timeline_type').value;
         const startingPrice = parseFloat(document.getElementById('id_starting_price').value);
         const endingPrice = parseFloat(document.getElementById('id_ending_price').value);
@@ -64,7 +64,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-
     // Bid amount validation
     const bidForms = document.querySelectorAll('form[action*="bid"]');
     bidForms.forEach(form => {
@@ -94,10 +93,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Initialize real-time chat if available
-    if (document.getElementById('chat-container')) {
-        initializeChat();
-    }
+    initializeChat();
+    setupChatForm();
+    scrollToBottom();
 
     // Toggle bid details
     document.querySelectorAll('.bid-card').forEach(card => {
@@ -119,93 +117,23 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(`${this.value}-details`).style.display = 'block';
         });
     });
-});
 
-function initializeChat() {
-    const chatContainer = document.getElementById('chat-container');
-    const gigId = chatContainer.dataset.gigId;
-    const userId = chatContainer.dataset.userId;
-    const messagesContainer = document.getElementById('chat-messages');
-    const chatForm = document.getElementById('chat-form');
-    
-    // Determine WebSocket protocol (ws:// or wss://)
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const chatSocket = new WebSocket(
-        `${wsProtocol}${window.location.host}/ws/chat/${gigId}/`
-    );
-
-    chatSocket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        const isSender = data.username === chatContainer.dataset.username;
-        
-        const messageElement = document.createElement('div');
-        messageElement.className = `message ${isSender ? 'sent' : 'received'}`;
-        messageElement.innerHTML = `
-            <div class="message-header">
-                <span class="sender">${data.username}</span>
-                <span class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</span>
-            </div>
-            <p>${data.message}</p>
-        `;
-        
-        messagesContainer.appendChild(messageElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    };
-
-    chatSocket.onclose = function(e) {
-        console.error('Chat socket closed unexpectedly');
-        // Show reconnect button or attempt to reconnect
-        showReconnectButton();
-    };
-
-    chatSocket.onerror = function(e) {
-        console.error('WebSocket error:', e);
-    };
-
-    chatForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const messageInput = this.querySelector('input[name="message"]');
-        const message = messageInput.value.trim();
-        
-        if (message && chatSocket.readyState === WebSocket.OPEN) {
-            chatSocket.send(JSON.stringify({
-                'message': message
-            }));
-            messageInput.value = '';
-        } else if (!chatSocket.OPEN) {
-            showReconnectButton();
-        }
-    });
-
-    function showReconnectButton() {
-        const reconnectBtn = document.createElement('button');
-        reconnectBtn.className = 'btn-reconnect';
-        reconnectBtn.textContent = 'Reconnect Chat';
-        reconnectBtn.addEventListener('click', function() {
-            this.remove();
-            initializeChat();
-        });
-        chatContainer.appendChild(reconnectBtn);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
     // Search and filter functionality
     const gigSearch = document.getElementById('gig-search');
     const categoryFilter = document.getElementById('category-filter');
     const gigCards = document.querySelectorAll('.gig-card');
 
     function filterGigs() {
-        const searchTerm = gigSearch.value.toLowerCase();
-        const category = categoryFilter.value.toLowerCase();
+        const searchTerm = gigSearch?.value.toLowerCase();
+        const category = categoryFilter?.value.toLowerCase();
 
         gigCards.forEach(card => {
             const title = card.querySelector('h3').textContent.toLowerCase();
             const description = card.querySelector('.gig-description').textContent.toLowerCase();
             const cardCategory = card.dataset.category;
 
-            const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
-            const matchesCategory = category === '' || cardCategory === category;
+            const matchesSearch = !searchTerm || title.includes(searchTerm) || description.includes(searchTerm);
+            const matchesCategory = !category || category === '' || cardCategory === category;
 
             if (matchesSearch && matchesCategory) {
                 card.style.display = 'block';
@@ -215,8 +143,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    gigSearch.addEventListener('input', filterGigs);
-    categoryFilter.addEventListener('change', filterGigs);
+    gigSearch?.addEventListener('input', filterGigs);
+    categoryFilter?.addEventListener('change', filterGigs);
 
     // Animation for how-it-works steps
     const steps = document.querySelectorAll('.step');
@@ -235,4 +163,224 @@ document.addEventListener('DOMContentLoaded', function() {
         step.style.transition = 'all 0.5s ease';
         observer.observe(step);
     });
+});
+
+/**
+ * Initialize real-time chat functionality
+ */
+let chatSocket = null;
+
+function initializeChat() {
+    const chatContainer = document.getElementById('chat-container');
+    if (!chatContainer) {
+        console.error('Chat container not found');
+        return;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const gigId = chatContainer.dataset.gigId;
+    
+    // Close existing connection if any
+    if (chatSocket) {
+        chatSocket.close();
+    }
+
+    chatSocket = new WebSocket(
+        `${protocol}${window.location.host}/ws/chat/${gigId}/`
+    );
+
+    chatSocket.onopen = function() {
+        console.log('WebSocket connected');
+    };
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        console.log("Received message data:", data);  // Debug
+        
+        if (data.status === 'saved' && data.message_id) {
+            // Replace optimistic update with confirmed message
+            updateMessageId('temp-' + data.timestamp, data.message_id);
+            console.log(`Message saved with ID: ${data.message_id}`);
+        }
+        else if (data.message) {
+            addMessageToChat(
+                data.message,
+                data.sender === chatContainer.dataset.currentUser,
+                data.timestamp,
+                data.message_id
+            );
+        }
+    };
+
+    chatSocket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+    };
+
+    chatSocket.onclose = function() {
+        console.log('WebSocket disconnected');
+    };
+
+    function updateMessageId(tempId, permanentId) {
+        const messageElement = document.querySelector(`[data-message-id="${tempId}"]`);
+        if (messageElement) {
+            messageElement.dataset.messageId = permanentId;
+            console.log(`Updated message ID from ${tempId} to ${permanentId}`);
+        }
+    }
+}
+
+function setupChatForm() {
+    const chatForm = document.getElementById('chat-form');
+    if (!chatForm) return;
+
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        
+        const messageInput = this.querySelector('input[name="message"]');
+        const message = messageInput.value.trim();
+        const chatContainer = document.getElementById('chat-container');
+        
+        if (!message || !chatSocket) return;
+
+        // Add optimistic update with temporary ID
+        const tempId = 'temp-' + Date.now();
+        addMessageToChat(
+            message,
+            true,
+            new Date().toISOString(),
+            tempId
+        );
+
+        try {
+            chatSocket.send(JSON.stringify({
+                'message': message,
+                'sender': chatContainer.dataset.currentUser,
+                'recipient': chatContainer.dataset.recipient,
+                'gig_id': chatContainer.dataset.gigId
+            }));
+            messageInput.value = '';
+        } catch (error) {
+            console.error('Error sending message:', error);
+            removeMessage(tempId); // Remove optimistic update if failed
+        }
+    });
+}
+
+function sendChatMessage() {
+    const chatForm = document.getElementById('chat-form');
+    const messageInput = chatForm.querySelector('input[name="message"]');
+    const message = messageInput.value.trim();
+    const chatContainer = document.getElementById('chat-container');
+    
+    if (!chatContainer) {
+        console.error('Chat container not found!');
+        return;
+    }
+
+    // Get gig_id from URL as fallback
+    const pathParts = window.location.pathname.split('/');
+    const gigIdFromUrl = pathParts[pathParts.length - 2]; // Assuming URL is /gigs/7/...
+
+    const messageData = {
+        'message': message,
+        'sender': chatContainer.dataset.currentUser,
+        'recipient': chatContainer.dataset.recipient,
+        'gig_id': chatContainer.dataset.gigId || gigIdFromUrl // Primary + fallback
+    };
+
+    // Final validation
+    if (!messageData.gig_id) {
+        console.error('Missing gig_id! Available data:', {
+            dataset: chatContainer.dataset,
+            fromUrl: gigIdFromUrl
+        });
+        alert('System error: Missing gig information. Please refresh.');
+        return;
+    }
+
+    console.log('Sending message with:', messageData)
+
+    // Validate all fields
+    const missingFields = Object.entries(messageData)
+        .filter(([key, value]) => !value)
+        .map(([key]) => key);
+
+    if (missingFields.length > 0) {
+        console.error('Missing required fields:', missingFields);
+        alert(`Missing required data: ${missingFields.join(', ')}`);
+        return;
+    }
+
+    // Add optimistic update
+    const tempId = 'temp-' + Date.now();
+    addMessageToChat(message, true, new Date().toISOString(), tempId);
+
+    try {
+        window.chatSocket.send(JSON.stringify(messageData));
+        messageInput.value = '';
+    } catch (error) {
+        console.error('Error sending message:', error);
+        removeMessage(tempId);
+    }
+}
+
+function addMessageToChat(message, isSent, timestamp, messageId) {
+    const messagesContainer = document.getElementById('chat-messages');
+    if (!messagesContainer) return;
+
+    const messageElement = document.createElement('div');
+    messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
+    messageElement.dataset.messageId = messageId;
+    messageElement.innerHTML = `
+        <div class="message-content">
+            <p>${message}</p>
+            <span class="timestamp">${new Date(timestamp).toLocaleString()}</span>
+        </div>
+    `;
+    messagesContainer.appendChild(messageElement);
+    scrollToBottom();
+}
+
+function removeMessage(messageId) {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+        messageElement.remove();
+    }
+}
+
+function scrollToBottom() {
+    const messagesContainer = document.getElementById('chat-messages');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
+
+/**
+ * Format currency for display
+ */
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-GH', {
+        style: 'currency',
+        currency: 'GHS'
+    }).format(amount);
+}
+
+// Add this as an alternative if you still have issues
+document.getElementById('send-button')?.addEventListener('click', function() {
+    const messageInput = document.querySelector('#chat-form input[name="message"]');
+    const message = messageInput.value.trim();
+    
+    if (message && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        const chatContainer = document.getElementById('chat-container');
+        addMessageToChat(message, true, new Date().toISOString());
+        
+        chatSocket.send(JSON.stringify({
+            'message': message,
+            'sender': chatContainer.dataset.currentUser,
+            'recipient': chatContainer.dataset.recipient
+        }));
+        
+        messageInput.value = '';
+    }
 });

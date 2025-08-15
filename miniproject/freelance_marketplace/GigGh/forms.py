@@ -109,6 +109,14 @@ class SubmissionForm(forms.ModelForm):
         }
 
 class ChatForm(forms.ModelForm):
+    message = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Type your message...',
+            'class': 'chat-input'
+        }),
+        required=True
+    )
+
     class Meta:
         model = Chat
         fields = ['message']

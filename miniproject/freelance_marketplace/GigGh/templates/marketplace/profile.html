@@ -39,7 +39,6 @@
         <a href="?tab=overview" class="{% if active_tab == 'overview' %}active{% endif %}">Overview</a>
         <a href="?tab=gigs" class="{% if active_tab == 'gigs' %}active{% endif %}">My Gigs</a>
         <a href="?tab=bids" class="{% if active_tab == 'bids' %}active{% endif %}">My Bids</a>
-        <a href="?tab=settings" class="{% if active_tab == 'settings' %}active{% endif %}">Settings</a>
     </nav>
 
     <!-- Tab Content -->
@@ -135,12 +134,6 @@
             <p>You haven't placed any bids yet.</p>
             {% endfor %}
         </div>
-            
-        {% elif active_tab == 'settings' %}
-            <div class="settings-section">
-                <h2>Account Settings</h2>
-                <!-- Settings form would go here -->
-            </div>
         {% endif %}
     </div>
 </div>

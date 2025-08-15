@@ -1,6 +1,7 @@
 /**
  * Base JavaScript for GigGh - Common functionality across all pages
  */
+import tippy from 'tippy.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     // Mobile menu toggle

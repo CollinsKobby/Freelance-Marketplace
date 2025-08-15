@@ -1,8 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Gig, Bid, Submission, Chat
+from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
+from django.http import JsonResponse
+from django.core.exceptions import PermissionDenied
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .forms import GigForm, BidForm, SubmissionForm, ChatForm, LoginForm, SignupForm, EditProfileForm
@@ -172,18 +177,37 @@ def gig_detail(request, gig_id):
     accepted_bid = bids.filter(status='accepted').first()
     submission = Submission.objects.filter(bidId=accepted_bid).first() if accepted_bid else None
     
-    # Chat messages
-    if request.user == gig.seller or (accepted_bid and request.user == accepted_bid.freelancer):
-        chat_messages = Chat.objects.filter(gig=gig).order_by('timestamp')
-    else:
-        chat_messages = None
-    
+    # Initialize chat variables
+    show_chat = False
+    chat_messages = []
+    recipient = None
+
+    if request.user.is_authenticated:
+        # Determine if chat should be shown
+        show_chat = (request.user == gig.seller or 
+                    (accepted_bid and request.user == accepted_bid.freelancer))
+        
+        # Get chat messages if authorized
+        if show_chat:
+            recipient = gig.seller if request.user != gig.seller else accepted_bid.freelancer
+            
+            if recipient:  # Only proceed if we have a valid recipient
+                chat_messages = Chat.objects.filter(
+                    gig=gig
+                ).filter(
+                    Q(sender=request.user, recipient=recipient) |
+                    Q(sender=recipient, recipient=request.user)
+                ).order_by('timestamp')
+
     context = {
         'gig': gig,
         'bids': bids,
         'accepted_bid': accepted_bid,
         'submission': submission,
+        'show_chat': show_chat,
         'chat_messages': chat_messages,
+        'recipient': recipient,
+        'current_user': request.user.username
     }
     return render(request, 'marketplace/gig_detail.html', context)
 
@@ -316,16 +340,95 @@ def submit_work(request, gig_id):
     
     return render(request, 'marketplace/submission_form.html', {'form': form, 'gig': gig})
 
-#@login_required
-def send_chat(request, gig_id):
+@login_required
+def chat_view(request, gig_id):
     gig = get_object_or_404(Gig, id=gig_id)
-    if request.method == 'POST':
+    
+    # Check if user is either the gig seller or has an accepted bid
+    accepted_bid = Bid.objects.filter(
+        gigId=gig, 
+        freelancer=request.user, 
+        status='accepted'
+    ).first()
+    
+    if not (request.user == gig.seller or accepted_bid):
+        raise PermissionDenied("You don't have permission to access this chat.")
+    
+    # Determine the other participant
+    if request.user == gig.seller:
+        recipient = accepted_bid.freelancer if accepted_bid else None
+    else:
+        recipient = gig.seller
+    
+    if not recipient:
+        raise PermissionDenied("No chat available for this gig yet.")
+    
+    # Get chat messages
+    chat_messages = Chat.objects.filter(
+    Q(gig=gig, sender=request.user, recipient=recipient) |
+    Q(gig=gig, sender=recipient, recipient=request.user)
+)  # <-- This closing parenthesis was missing
+
+    return render(request, 'partials/_chat.html', {
+        'chat_messages': chat_messages,
+        'recipient': recipient,
+        'gig': gig,
+        'bid': accepted_bid
+    })
+
+@login_required
+def send_chat(request, gig_id):
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        gig = get_object_or_404(Gig, id=gig_id)
+        accepted_bid = Bid.objects.filter(
+            gigId=gig, 
+            freelancer=request.user, 
+            status='accepted'
+        ).first()
+        
+        # Verify chat participants
+        if not (request.user == gig.seller or accepted_bid):
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+        # Determine recipient
+        recipient = gig.seller if request.user != gig.seller else accepted_bid.freelancer
+        
         form = ChatForm(request.POST)
         if form.is_valid():
             message = form.save(commit=False)
             message.gig = gig
+            message.bid = accepted_bid if accepted_bid else None
             message.sender = request.user
-            message.recipient = gig.seller if request.user != gig.seller else message.bid.freelancer
+            message.recipient = recipient
             message.save()
-            return redirect('gig_detail', gig_id=gig.id)
-    return redirect('gig_detail', gig_id=gig.id)
+            
+            # Mark previous unread messages as read
+            Chat.objects.filter(
+                gig=gig,
+                sender=recipient,
+                recipient=request.user,
+                is_read=False
+            ).update(is_read=True)
+            
+            channel_layer = get_channel_layer()
+
+            # Send via WebSocket
+            async_to_sync(channel_layer.group_send)(
+                f'chat_{gig_id}',
+                {
+                    'type': 'chat_message',
+                    'message': message.message,
+                    'sender': request.user.username,
+                    'timestamp': message.timestamp.strftime('%H:%M'),
+                    'sender_id': request.user.id
+                }
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': message.message,
+                'timestamp': message.timestamp.strftime('%H:%M'),
+                'sender': request.user.username
+            })
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)

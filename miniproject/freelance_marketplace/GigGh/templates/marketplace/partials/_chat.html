@@ -1,16 +1,33 @@
-<div class="chat-container" id="chat-container"></div>
+<div id="chat-container" 
+     data-gig-id="{{ gig.id }}"  
+     data-current-user="{{ request.user.username }}"
+     data-recipient="{{ recipient.username }}"
+     data-debug="true">
+     
     <div class="chat-header">
         <h3>Chat with {{ recipient.username }}</h3>
-        <button class="close-chat">&times;</button>
+        <span class="chat-status">Online</span>
     </div>
-    <div class="chat-messages" id="chat-messages">
+    
+    <div id="chat-messages">
         {% for message in chat_messages %}
-            <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
+        <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}" 
+             data-message-id="{{ message.id }}">
+            <div class="message-content">
+                {% if message.sender != request.user %}
+                <span class="sender-name">{{ message.sender.username }}</span>
+                {% endif %}
                 <p>{{ message.message }}</p>
-                <span class="timestamp">{{ message.timestamp|time:"H:i" }}</span>
+                <span class="timestamp">{{ message.timestamp|date:"H:i" }}</span>
             </div>
+        </div>
+        {% empty %}
+        <div class="no-messages">
+            <p>No messages yet. Start the conversation!</p>
+        </div>
         {% endfor %}
     </div>
+    
     <form class="chat-form" id="chat-form">
         {% csrf_token %}
         <input type="text" name="message" placeholder="Type your message..." required>

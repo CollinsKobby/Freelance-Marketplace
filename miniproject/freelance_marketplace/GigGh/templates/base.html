@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{% static 'css/marketplace.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://unpkg.com/tippy.js@6/dist/tippy-bundle.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy-bundle.umd.min.js"></script>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -18,7 +19,6 @@
             <a href="{% url 'home' %}" class="branding-link">
                 <div class="branding">
                     <img src="{% static 'images/GigGh.png' %}" alt="GigGh Logo" class="logo-img">
-                    <!-- <span class="logo-text">GigGh</span> -->
                 </div>
             </a>
             <nav class="main-nav">
