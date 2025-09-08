@@ -94,6 +94,7 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -105,6 +106,18 @@ DATABASES = {
    }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'gigGHdjango',
+#         'USER': 'gigghdjango_user',
+#         'PASSWORD': 'KrLnu5cfpXFB3Y43Vv39X9S4dm0M1uM1',
+#         'HOST': 'localhost',
+#         'PORT': 5432
+#    }
+# }
+
+# postgresql://gigghdjango_user:KrLnu5cfpXFB3Y43Vv39X9S4dm0M1uM1@dpg-d2vb03v5r7bs73cmj6ng-a.oregon-postgres.render.com/gigghdjango
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
