@@ -19,8 +19,8 @@ urlpatterns = [
     path('gigs/<int:gig_id>/submit/', views.submit_work, name='submit_work'),
     path('chat/<int:gig_id>/', views.chat_view, name='chat_view'),
     path('send_chat/<int:gig_id>/', views.send_chat, name='send_chat'),
-    path('accounts/login/', views.login_view, name='login'),
-    path('accounts/signup/', views.signup_view, name='signup'),  
+    path('accounts/login/', views.login_View, name='login'),
+    path('accounts/signup/', views.signup, name='signup'),
     path('accounts/logout/', views.logout_view, name='logout'),
     
     # Password reset URLs
