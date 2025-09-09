@@ -53,7 +53,7 @@ def logout_view(request):
     else:
         return redirect('home')
 
-@login_required
+
 def home(request):
     gigs = Gig.objects.filter(status='open').order_by('-created_at')[:12]
     context = {
