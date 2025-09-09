@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Gig, Bid, Submission, Chat
+from .models import Gig, Bid, Chat
 from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
@@ -8,17 +8,9 @@ from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.contrib.auth.views import LoginView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from .forms import GigForm, BidForm, SubmissionForm, ChatForm, LoginForm, SignupForm, EditProfileForm
-from django.views import View
-from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from .forms import GigForm, BidForm, SubmissionForm, ChatForm, SignupForm, EditProfileForm
 from django.http import HttpResponseForbidden
 
-#class CustomLoginView(LoginView):
-#    form_class = LoginForm
-#    template_name = 'registration/login.html'
 
 def signup(request):
     if request.method == 'POST':
@@ -61,7 +53,7 @@ def logout_view(request):
     else:
         return redirect('home')
 
-#@login_required
+@login_required
 def home(request):
     gigs = Gig.objects.filter(status='open').order_by('-created_at')[:12]
     context = {
@@ -69,7 +61,7 @@ def home(request):
     }
     return render(request, 'marketplace/home.html', context)
 
-#@login_required
+@login_required
 def profile(request):
     user = request.user
     posted_gigs = Gig.objects.filter(seller=user).order_by('-created_at')
@@ -112,7 +104,7 @@ def profile(request):
     }
     return render(request, 'marketplace/profile.html', context)
 
-#@login_required
+@login_required
 def edit_profile(request):
     if request.method == 'POST':
         form = EditProfileForm(request.POST, request.FILES, instance=request.user)
@@ -170,7 +162,7 @@ def edit_gig(request, gig_id):
     }
     return render(request, 'marketplace/gig_form.html', context)
 
-#@login_required
+@login_required
 def gig_detail(request, gig_id):
     gig = get_object_or_404(Gig, id=gig_id)
     accepted_bid = Bid.objects.filter(gigId=gig, status='accepted').first()
@@ -324,7 +316,7 @@ def cancel_bid(request, bid_id):
 
 
 
-#@login_required
+@login_required
 def submit_work(request, gig_id):
     gig = get_object_or_404(Gig, id=gig_id)
     accepted_bid = Bid.objects.filter(gig=gig, freelancer=request.user, status='accepted').first()
