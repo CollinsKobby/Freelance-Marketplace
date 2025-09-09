@@ -173,41 +173,46 @@ def edit_gig(request, gig_id):
 #@login_required
 def gig_detail(request, gig_id):
     gig = get_object_or_404(Gig, id=gig_id)
-    bids = Bid.objects.filter(gigId=gig).order_by('biddingAmount')
-    accepted_bid = bids.filter(status='accepted').first()
-    submission = Submission.objects.filter(bidId=accepted_bid).first() if accepted_bid else None
+    accepted_bid = Bid.objects.filter(gigId=gig, status='accepted').first()
+    user_bids = Bid.objects.filter(gigId=gig, freelancer=request.user) if request.user.is_authenticated else None
     
     # Initialize chat variables
-    show_chat = False
     chat_messages = []
     recipient = None
-
+    can_chat = False
+    
     if request.user.is_authenticated:
-        # Determine if chat should be shown
-        show_chat = (request.user == gig.seller or 
-                    (accepted_bid and request.user == accepted_bid.freelancer))
+        # Determine who can chat with whom
+        if request.user == gig.seller:
+            # Seller can chat with accepted bidder
+            if accepted_bid:
+                recipient = accepted_bid.freelancer
+                can_chat = True
+        elif accepted_bid and request.user == accepted_bid.freelancer:
+            # Accepted freelancer can chat with seller
+            recipient = gig.seller
+            can_chat = True
+        elif user_bids:
+            # Users with bids can chat with seller (optional)
+            recipient = gig.seller
+            can_chat = True
         
-        # Get chat messages if authorized
-        if show_chat:
-            recipient = gig.seller if request.user != gig.seller else accepted_bid.freelancer
-            
-            if recipient:  # Only proceed if we have a valid recipient
-                chat_messages = Chat.objects.filter(
-                    gig=gig
-                ).filter(
-                    Q(sender=request.user, recipient=recipient) |
-                    Q(sender=recipient, recipient=request.user)
-                ).order_by('timestamp')
+        # Load messages if chat is active
+        if recipient:
+            chat_messages = Chat.objects.filter(
+                Q(sender=request.user, recipient=recipient) |
+                Q(sender=recipient, recipient=request.user),
+                gig=gig
+            ).order_by('timestamp')
 
     context = {
         'gig': gig,
-        'bids': bids,
-        'accepted_bid': accepted_bid,
-        'submission': submission,
-        'show_chat': show_chat,
+        'bids': Bid.objects.filter(gigId=gig),
         'chat_messages': chat_messages,
         'recipient': recipient,
-        'current_user': request.user.username
+        'show_chat': can_chat,
+        'accepted_bid': accepted_bid,
+        'user_bids': user_bids,
     }
     return render(request, 'marketplace/gig_detail.html', context)
 
