@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import FileExtensionValidator
-from freelance_marketplace import settings
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
