@@ -14,8 +14,14 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
+import django
 from django.contrib import admin
 from django.urls import include, path
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'freelance_marketplace.settings')
+django.setup()
+
 from GigGh import views
 
 urlpatterns = [
